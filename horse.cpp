@@ -1,131 +1,142 @@
 #include <iostream>
+#include <vector>
 #include <queue>
 
-using namespace std;
 
-struct point
+struct Point
 {
     int x;
     int y;
-    point(int _x, int _y):x(_x),y(_y){}
+    Point(int x, int y):x(x),y(y){}
 
 };
-void print(int**map,int size )
+
+using Matrix = std::vector< std::vector < int > >;
+using Queue = std::queue < Point >;
+
+void printLine(const char* text)
 {
-    for(int i(0);i<size;i++)
+    std::cout << text << std::endl;
+}
+
+void printMatrix(Matrix& m)
+{
+    for(auto& i : m)
     {
-        for(int j(0);j<size;j++)
+        for( auto& j : i)
         {
-            cout << map[i][j] << " ";
+            std::cout << j << " ";
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 }
-bool NoNullMass(int**map,int size)
-{
-    for(int i(0);i<size;i++)
-    {
-        for(int j(0);j<size;j++)
-        {
-            if(map[i][j]==0)
-            {
-                return false;
-            }
-        }
-      }
-    return true;
-}
-bool ekzem(int **map, int size, point& nau)
-{
-  if(nau.x>-1 && nau.x <size && nau.y >-1 && nau.y <size)
-  {
-      if(map[nau.x][nau.y]==0)
-      {
-          return true;
-      }
-      else
-      {
-          return false;
-      }
-  }
-  else
-  {
-      return false;
-  }
-}
-void proverka(int **map, int size,point nau, queue <point>& cord)
-{
-    if(ekzem(map,size,nau)==true)
-    {
-        map[nau.x][nau.y]=map[cord.front().x][cord.front().y]+1;
-        cord.push(nau);
 
+bool isValidityOfCoord(Point p, Matrix& map)
+{
+    if(  ( p.x >= 0 ) &&  ( p.x < map.size() ) && ( p.y >= 0 ) && ( p.y < map.size())   )
+        return true;
+    else
+        return false;
+
+}
+
+bool isTheMatrixFill(Matrix& m)
+{
+    for(auto& i : m)
+    {
+        for( auto& j : i)
+        {
+            if( j == 0 )
+                return false;  // если обнаружена точка на поле равная нулю, то в матрице еще есть не заполеные точки
+        }
     }
 
-
-
-}
-void hod(int **map, int size, queue <point>& cord)
-{
-    int x(cord.front().x),y(cord.front().y);
-
-   proverka(map,size,point(x+1,y+2),cord);
-    proverka(map,size,point(x+1,y-2),cord);
-   proverka(map,size,point(x+2,y+1),cord);
-    proverka(map,size,point(x+2,y-1),cord);
-    proverka(map,size,point(x-1,y+2),cord);
-  proverka(map,size,point(x-1,y-2),cord);
-    proverka(map,size,point(x-2,y+1),cord);
-   proverka(map,size,point(x-2,y-1),cord);
-    cord.pop();
-
-
-
-
-
+    return true; // если таких не встретилось, то матрица заполенена
 }
 
-void prohod(int **map, int size, queue <point>& cord)
+void tryPushPoint(Matrix& map, Queue& queuePoints, Point currentPoint )
 {
-    if(NoNullMass(map,size)==false )
+    if( isValidityOfCoord(currentPoint,map) && ( map[currentPoint.x][currentPoint.y] == 0 ) ) // доверяем ленивым вычислениям в С++
     {
-        hod(map,size,cord);
-          if(cord.size()!=0)
-          {
-        prohod(map,size,cord);
-          }
-          else
-          {
-              cout << "невозможно!!!" << endl;
-          }
+        // если точка в допустимой области и не посещене ранее то увеличиваем значение в ней на 1 и добавляем в очередь
+        map[ currentPoint.x ][ currentPoint.y ] =  map[ queuePoints.front().x ][ queuePoints.front().y ] + 1;
+        queuePoints.push(currentPoint);
+    }
 
+}
+
+void iteratingOverTheMap( Matrix& map, Queue& queuePoints )
+{
+    // обходим текущую точку во всех направлениях и после убераем из очереди
+    int x( queuePoints.front().x ), y( queuePoints.front().y );
+
+    tryPushPoint( map, queuePoints, Point ( x + 1, y + 2 ) );
+    tryPushPoint( map, queuePoints, Point ( x + 1, y - 2 ) );
+    tryPushPoint( map, queuePoints, Point ( x + 2, y + 1 ) );
+    tryPushPoint( map, queuePoints, Point ( x + 2, y - 1 ) );
+    tryPushPoint( map, queuePoints, Point ( x - 1, y + 2 ) );
+    tryPushPoint( map, queuePoints, Point ( x - 1, y - 2 ) );
+    tryPushPoint( map, queuePoints, Point ( x - 2, y + 1 ) );
+    tryPushPoint( map, queuePoints, Point ( x - 2, y - 1 ) );
+
+    queuePoints.pop();
+
+}
+
+void tryToMakeIterate(Matrix& map, Queue& queuePoints)
+{
+    if( !isTheMatrixFill( map ) )
+    {
+        iteratingOverTheMap( map, queuePoints );
+        if( !queuePoints.empty() )
+            tryToMakeIterate( map, queuePoints );
+        else
+            printLine("Полностью заолнить карту конем невозможно. Последняя конфигурация:");
     }
     else
-    {
-        cout << "карта заполнима конем" <<endl;
-    }
+        printLine("Поле заполнено конем:");
 
 }
+
 int main()
 {
-    int size;
-    cin >> size;
-    int **map=new int*[size];
-    for(int i(0);i<size;i++)
+    int sizeMatrix(0);
+
+    while(sizeMatrix <= 4)
     {
-        map[i]=new int[size];
+        printLine("Введите размер поля ( более четырех ):");
+
+        std::cin >> sizeMatrix;
     }
-    int x,y;
-    cin >> x >> y;
-    point start(x,y);
-    queue <point> cord;
-    map[start.x][start.y]=1;
-    cord.push(start);
-    print(map,size);
-    cout << endl;
-    prohod(map,size,cord);
-   print(map,size);
+
+    Matrix map(sizeMatrix);
+    for(auto& i : map)
+    {
+        i.resize(sizeMatrix);
+    }
+
+
+    int cordX,cordY;
+    do
+    {
+        printLine("Введите значение координат Х и У: ");
+        std::cin >> cordX >> cordY;
+    }
+    while( !isValidityOfCoord( Point( cordX, cordY ), map ) );
+
+    Queue queuePoints;
+    queuePoints.push( Point( cordX ,cordY )); // добавляем в очередь первую точку
+    map[ cordX ][ cordY ] = 1;  // первую точку на карте отмечаем еденицей
+
+    printLine("Начальное состояние поля:");
+    printMatrix( map );
+
+    tryToMakeIterate( map, queuePoints );
+    printMatrix( map );
 
 
 }
+
+
+
 
